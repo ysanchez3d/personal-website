@@ -1,0 +1,50 @@
+---
+import { footerLinks, site } from '../site.config';
+
+const links = footerLinks(site);
+const year = new Date().getFullYear();
+---
+
+<footer>
+  <nav aria-label="Contact and profiles">
+    <ul>
+      {
+        links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+  <p>© {year} {site.name}</p>
+</footer>
+
+<style>
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.5rem;
+  }
+
+  p {
+    margin: 0;
+  }
+</style>
