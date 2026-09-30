@@ -1,0 +1,12 @@
+---
+import { getCollection } from 'astro:content';
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const posts = await getCollection('blog');
+---
+
+<BaseLayout title="Blog" description="Writing on software engineering and life.">
+  <h1>Blog</h1>
+  <PostList posts={posts} />
+</BaseLayout>

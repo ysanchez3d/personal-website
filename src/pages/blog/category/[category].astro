@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+import PostList from '../../../components/PostList.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const categories = {
+  tech: { title: 'Tech posts', description: 'Writing on software engineering.' },
+  personal: { title: 'Personal posts', description: 'Writing on life outside of code.' },
+} as const;
+
+export function getStaticPaths() {
+  return [{ params: { category: 'tech' } }, { params: { category: 'personal' } }];
+}
+
+const category = Astro.params.category as keyof typeof categories;
+const posts = await getCollection('blog', (post) => post.data.category === category);
+---
+
+<BaseLayout title={categories[category].title} description={categories[category].description}>
+  <h1>{categories[category].title}</h1>
+  <PostList posts={posts} />
+</BaseLayout>

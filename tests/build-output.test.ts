@@ -1,45 +1,34 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
-import { parse, type HTMLElement } from 'node-html-parser';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { buildSite, type BuiltSite } from './helpers/build-site';
 
-// Builds the real site once and checks what visitors actually get.
-let outDir: string;
-const pages = new Map<string, HTMLElement>();
-
-function htmlFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true, recursive: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.html'))
-    .map((entry) => join(entry.parentPath, entry.name));
-}
+// Builds the real site with its real content and checks what visitors get.
+let site: BuiltSite;
 
 beforeAll(() => {
-  outDir = mkdtempSync(join(tmpdir(), 'site-build-'));
-  execFileSync('npx', ['astro', 'build', '--outDir', outDir], { stdio: 'pipe' });
-  for (const file of htmlFiles(outDir)) {
-    pages.set(relative(outDir, file), parse(readFileSync(file, 'utf8')));
-  }
+  site = buildSite();
 }, 120_000);
 
-afterAll(() => {
-  rmSync(outDir, { recursive: true, force: true });
-});
-
-function page(path: string): HTMLElement {
-  const root = pages.get(path);
-  if (!root) throw new Error(`${path} was not built`);
-  return root;
-}
+afterAll(() => site?.cleanup());
 
 describe('built site', () => {
-  it('builds a home page and a 404 page', () => {
-    expect([...pages.keys()].sort()).toEqual(['404.html', 'index.html']);
+  it('builds the home, 404, and blog pages', () => {
+    for (const path of ['index.html', '404.html', 'blog/index.html']) {
+      expect(site.pages.has(path), path).toBe(true);
+    }
+  });
+
+  it('links to Home and Blog in the header of every page', () => {
+    for (const [path, root] of site.pages) {
+      const nav = root.querySelectorAll('header nav a').map((a) => [a.text.trim(), a.getAttribute('href')]);
+      expect(nav, path).toEqual([
+        ['Home', '/'],
+        ['Blog', '/blog/'],
+      ]);
+    }
   });
 
   it('shows email, LinkedIn, GitHub, and DEV.to in the footer of every page', () => {
-    for (const [path, root] of pages) {
+    for (const [path, root] of site.pages) {
       const hrefs = root.querySelectorAll('footer a').map((a) => a.getAttribute('href'));
       expect(hrefs, path).toEqual([
         'mailto:hello@yandrisanchez.com',
@@ -51,7 +40,7 @@ describe('built site', () => {
   });
 
   it('opens external footer links in a new tab without leaking the opener', () => {
-    for (const [path, root] of pages) {
+    for (const [path, root] of site.pages) {
       const external = root
         .querySelectorAll('footer a')
         .filter((a) => a.getAttribute('href')?.startsWith('https://'));
@@ -64,16 +53,16 @@ describe('built site', () => {
   });
 
   it('gives every page a title and a meta description', () => {
-    expect(page('index.html').querySelector('title')?.text).toBe('Yandri Sanchez');
-    expect(page('404.html').querySelector('title')?.text).toBe('Page not found | Yandri Sanchez');
-    for (const [path, root] of pages) {
+    expect(site.page('index.html').querySelector('title')?.text).toBe('Yandri Sanchez');
+    expect(site.page('404.html').querySelector('title')?.text).toBe('Page not found | Yandri Sanchez');
+    for (const [path, root] of site.pages) {
       const description = root.querySelector('meta[name="description"]')?.getAttribute('content');
       expect(description, path).toBeTruthy();
     }
   });
 
   it('shows a 404 page that links back home', () => {
-    const notFound = page('404.html');
+    const notFound = site.page('404.html');
     expect(notFound.querySelector('h1')?.text).toBe('Page not found');
     expect(notFound.querySelectorAll('main a').map((a) => a.getAttribute('href'))).toContain('/');
   });

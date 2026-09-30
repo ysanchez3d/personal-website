@@ -1,0 +1,66 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+}
+
+const posts = [...Astro.props.posts].sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const filters = [
+  { label: 'All', href: '/blog/' },
+  { label: 'Tech', href: '/blog/category/tech/' },
+  { label: 'Personal', href: '/blog/category/personal/' },
+];
+const current = Astro.url.pathname.replace(/\/?$/, '/');
+---
+
+<nav aria-label="Filter posts">
+  {
+    filters.map((filter) => (
+      <a href={filter.href} aria-current={filter.href === current ? 'page' : undefined}>
+        {filter.label}
+      </a>
+    ))
+  }
+</nav>
+<ul>
+  {
+    posts.map((post) => (
+      <li>
+        <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+        <time datetime={post.data.date.toISOString()}>
+          {post.data.date.toLocaleDateString('en-US', { dateStyle: 'medium', timeZone: 'UTC' })}
+        </time>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  nav {
+    display: flex;
+    gap: 1rem;
+  }
+
+  [aria-current='page'] {
+    font-weight: 600;
+  }
+
+  ul {
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  time {
+    color: var(--muted);
+    white-space: nowrap;
+  }
+</style>
